@@ -8,7 +8,7 @@ LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
 const int paintZoff = 60;
 const int paintZon = 80;
 
-// Servo on PWM pin 6
+// Servo on PWM pin 10
 const int paintServoPin = 10;
 
 const int stepsPerRevolution = 50; 
@@ -17,8 +17,8 @@ const int stepsPerRevolution = 50;
 Servo paintServo;  
 
 // Initialize steppers for X- and Y-axis using this Arduino pins for the L293D H-bridge
-Stepper myStepperX(stepsPerRevolution, 2,3,4,5);            
-Stepper myStepperY(stepsPerRevolution, 9,8,7,6);  
+Stepper myStepperX(stepsPerRevolution, 2,3,6,7);            
+Stepper myStepperY(stepsPerRevolution, 4,5,8,9);  
 
 struct point { 
   float x; 
@@ -38,8 +38,8 @@ int paintDelay = 50;
 // Motor steps to go 1 millimeter.
 // Use test sketch to go 100 steps. Measure the length of line. 
 // Calculate steps per mm. Enter here.
-float StepsPerMillimeterX = 6.0;
-float StepsPerMillimeterY = 6.0;
+float StepsPerMillimeterX = 10.0;
+float StepsPerMillimeterY = 10.0;
 
 // Drawing robot limits, in mm
 // OK to start with. Could go  off to 50 mm if calibrated well. 
@@ -65,9 +65,6 @@ boolean verbose = false;
 //  Discard anything with a (
 //  Discard any other command!
 
-/**********************
- * void set off() - Initialisations
- ***********************/
 void setup() {//Setup
 Serial.begin( 9600 );
 lcd.begin(16, 2);
@@ -112,8 +109,6 @@ void loop()
   lineIsComment = false;
 
   while (1) {
-
-    // Serial reception - Mostly from Grbl, added semicolon s offport
     while ( Serial.available()>0 ) {
       c = Serial.read();
       if (( c == '\n') || (c == '\r') ) {             // End of line reached
@@ -126,16 +121,11 @@ void loop()
           processIncomingLine( line, lineIndex );
           lineIndex = 0;
         } 
-        else { 
-          // Empty or comment line. Skip block.
-        }
-        lineIsComment = false;
-        lineSemiColon = false;
         Serial.println("ok");    
       } 
       else {
-        if ( (lineIsComment) || (lineSemiColon) ) {   // Throw away all comment characters
-          if ( c == ')' )  lineIsComment = false;     // End of comment. Resume line.
+        if ( (lineIsComment) || (lineSemiColon) ) {  
+          if ( c == ')' )  lineIsComment = false;    
         } 
         else {
           if ( c <= ' ' ) {                           // Throw away whitepace and control characters
@@ -192,7 +182,7 @@ void processIncomingLine( char* line, int charNB ) {
    paintoff();
       break;
     case 'G':
-      buffer[0] = line[ currentIndex++ ];          // /!\ Dirty - Only works with 2 digit commands
+      buffer[0] = line[ currentIndex++ ];          
       //      buffer[1] = line[ currentIndex++ ];
       //      buffer[2] = '\0';
       buffer[1] = '\0';
@@ -200,7 +190,6 @@ void processIncomingLine( char* line, int charNB ) {
       switch ( atoi( buffer ) ){                   // Select G command
       case 0:                                   // G00 & G01 - Movement or fast movement. Same here
       case 1:
-        // /!\ Dirty - S offpose that X is before Y
         char* indexX = strchr( line+currentIndex, 'X' );  // Get X/Y position in the string (if any)
         char* indexY = strchr( line+currentIndex, 'Y' );
         if ( indexY <= 0 ) {
@@ -224,7 +213,7 @@ void processIncomingLine( char* line, int charNB ) {
       }
       break;
     case 'M':
-      buffer[0] = line[ currentIndex++ ];        // /!\ Dirty - Only works with 3 digit commands
+      buffer[0] = line[ currentIndex++ ];      
       buffer[1] = line[ currentIndex++ ];
       buffer[2] = line[ currentIndex++ ];
       buffer[3] = '\0';
@@ -275,7 +264,7 @@ lcd.setCursor(8,0);lcd.print("Y=");lcd.print(y1);lcd.print("  ");
     Serial.println("");
   }  
 
-  //  Bring instructions within limits
+  // limits
   if (x1 >= Xmax) { 
     x1 = Xmax; 
   }
@@ -377,12 +366,6 @@ void paintoff() {
   paintServo.write(paintZoff); 
   delay(LineDelay); 
   Zpos=Zmax; 
-  
-  if (verbose) { 
-    Serial.println("paint off"); 
-  } 
-  lcd.setCursor(0,1);
-  lcd.print("paint off");
 }
 
 //  sprays paint
@@ -390,9 +373,4 @@ void painton() {
   paintServo.write(paintZon); 
   delay(LineDelay); 
   Zpos=Zmin; 
-  if (verbose) { 
-    Serial.println("paint on."); 
-  } 
-  lcd.setCursor(0,1);
-  lcd.print("paint on");
 }
